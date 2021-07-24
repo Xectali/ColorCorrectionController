@@ -1,0 +1,8 @@
+**/*.lnk
+**/*.smx
+**/.DS_Store
+build/*
+!build/README
+_*
+vendor
+*.zip

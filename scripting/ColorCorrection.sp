@@ -378,12 +378,7 @@ void Frame_RetryAddQueue(int data)
 	int client = (data & 0x7F);
 
 	if (IsValidEntity(entity) && IsClientInGame(client)) {
-		#if defined _pseudo_intmap
-		if (g_FlaggedClient.GetValue(entity) != 0 && g_FlaggedClient.GetValue(entity) != client)
-		#else
-		if (value != 0 && value != client)
-		#endif
-		{
+		if (g_FlaggedClient.GetValue(entity) != 0 && g_FlaggedClient.GetValue(entity) != client) {
 			RequestFrame(Frame_RetryAddQueue, data);
 			return;
 		}

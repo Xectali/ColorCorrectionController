@@ -33,7 +33,7 @@ public Plugin myinfo =
 	name = "Color Correction Controller",
 	author = "PŠΣ™ SHUFEN",
 	description = "",
-	version = "0.1",
+	version = "0.2",
 	url = "https://possession.jp"
 };
 

@@ -11,6 +11,7 @@
 #endif
 
 #define DEBUG
+//#define USE_OnEntitySpawned
 
 IntMap g_Queue = null;
 IntMap g_FlaggedClient = null;
@@ -96,11 +97,19 @@ public void OnPluginStart()
 	}
 
 	int entity = INVALID_ENT_REFERENCE;
+	#if defined USE_OnEntitySpawned
 	while ((entity = FindEntityByClassname(entity, "*")) != INVALID_ENT_REFERENCE) {
+	#else
+	while ((entity = FindEntityByClassname(entity, "color_correction")) != INVALID_ENT_REFERENCE) {
+	#endif
+		#if defined USE_OnEntitySpawned
 		char sClassname[64];
 		if (GetEntityClassname(entity, sClassname, sizeof(sClassname))) {
 			OnEntitySpawned(entity, sClassname);
 		}
+		#else
+		OnEntitySpawn_Post(entity);
+		#endif
 	}
 }
 
@@ -242,14 +251,33 @@ public void Event_RoundChange(Event event, const char[] name, bool dontBroadcast
 	#endif
 }
 
+#if !defined USE_OnEntitySpawned
+public void OnEntityCreated(int entity, const char[] classname)
+{
+	if (entity > MaxClients && entity < 2048) {
+		if (classname[0] == 'c' && classname[1] == 'o' && classname[5] == '_' && classname[6] == 'c') {
+			SDKHook(entity, SDKHook_SpawnPost, OnEntitySpawn_Post);
+		}
+	}
+}
+#endif
+
+#if defined USE_OnEntitySpawned
 public void OnEntitySpawned(int entity, const char[] classname)
+#else
+public void OnEntitySpawn_Post(int entity)
+#endif
 {
 	if (!g_bEnabled) {
 		return;
 	}
 
+	#if defined USE_OnEntitySpawned
 	if (entity > MaxClients && entity < 2048) {
 		if (classname[0] == 'c' && classname[1] == 'o' && classname[5] == '_' && classname[6] == 'c') {
+	#else
+	{
+	#endif
 			SetEdictFlags(entity, GetEdictFlags(entity) & ~FL_EDICT_ALWAYS);
 			SDKHook(entity, SDKHook_SetTransmit, CC_SetTransmit);
 
@@ -271,8 +299,12 @@ public void OnEntitySpawned(int entity, const char[] classname)
 			g_BackupFadeDuration.SetValue(entity, 0.0);
 
 			g_hAcceptInput.HookEntity(Hook_Pre, entity, AcceptInput);
+	#if defined USE_OnEntitySpawned
 		}
 	}
+	#else
+	}
+	#endif
 }
 
 public void OnEntityDestroyed(int entity)

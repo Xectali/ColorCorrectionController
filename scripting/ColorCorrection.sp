@@ -10,12 +10,12 @@
 #include <pseudo-intmap>
 #endif
 
-#define DEBUG
+//#define DEBUG
 //#define USE_OnEntitySpawned
 
 IntMap g_Queue = null;
 IntMap g_FlaggedClient = null;
-IntMap g_BackupFadeDuration = null;
+IntMap g_BackupCurWeight = null;
 
 Menu g_hMenu_Settings = null;
 Cookie g_hStatusCookie;
@@ -33,7 +33,7 @@ public Plugin myinfo =
 	name = "Color Correction Controller",
 	author = "PŠΣ™ SHUFEN",
 	description = "",
-	version = "0.2",
+	version = "0.3",
 	url = "https://possession.jp"
 };
 
@@ -42,7 +42,7 @@ public void OnPluginStart()
 	//======== Array ========//
 	g_Queue = new IntMap();
 	g_FlaggedClient = new IntMap();
-	g_BackupFadeDuration = new IntMap();
+	g_BackupCurWeight = new IntMap();
 
 	//======== Commands ========//
 	RegConsoleCmd("sm_cc", Command_ToggleColorCorrection);
@@ -243,11 +243,11 @@ public void Event_RoundChange(Event event, const char[] name, bool dontBroadcast
 	#if defined _pseudo_intmap
 	g_Queue.Clear();
 	g_FlaggedClient.Clear();
-	g_BackupFadeDuration.Clear();
+	g_BackupCurWeight.Clear();
 	#else
 	g_Queue.ClearCells();
 	g_FlaggedClient.ClearCells();
-	g_BackupFadeDuration.ClearCells();
+	g_BackupCurWeight.ClearCells();
 	#endif
 }
 
@@ -296,7 +296,7 @@ public void OnEntitySpawn_Post(int entity)
 
 			g_Queue.SetValue(entity, bEnabled);
 			g_FlaggedClient.SetValue(entity, 0);
-			g_BackupFadeDuration.SetValue(entity, 0.0);
+			g_BackupCurWeight.SetValue(entity, 0.0);
 
 			g_hAcceptInput.HookEntity(Hook_Pre, entity, AcceptInput);
 	#if defined USE_OnEntitySpawned
@@ -325,20 +325,32 @@ public void OnEntityDestroyed(int entity)
 	#if defined _pseudo_intmap
 	g_Queue.Remove(_entity);
 	g_FlaggedClient.Remove(_entity);
-	g_BackupFadeDuration.Remove(_entity);
+	g_BackupCurWeight.Remove(_entity);
 	#else
 	g_Queue.RemoveCell(_entity);
 	g_FlaggedClient.RemoveCell(_entity);
-	g_BackupFadeDuration.RemoveCell(_entity);
+	g_BackupCurWeight.RemoveCell(_entity);
 	#endif
 }
 
+#if defined DEBUG
+float last_weight[2048];
+#endif
 public Action CC_SetTransmit(int entity, int client)
 {
 	SetEdictFlags(entity, GetEdictFlags(entity) & ~FL_EDICT_ALWAYS);
 
+	#if defined DEBUG
+	if (last_weight[entity] != GetEntPropFloat(entity, Prop_Send, "m_flCurWeight")) {
+		last_weight[entity] = GetEntPropFloat(entity, Prop_Send, "m_flCurWeight");
+		PrintToChat(client, "ColorCorrection[LastWeight]: %f", last_weight[entity]);
+	}
+	#endif
+
 	static int queue;
 	queue = g_FlaggedClient.GetValue(entity);
+
+	static float weight;
 
 	if (queue == client) {
 		bool disable = g_bClientDisableCC[client];
@@ -347,11 +359,12 @@ public Action CC_SetTransmit(int entity, int client)
 
 		SetEdictFlags(entity, GetEdictFlags(entity) | FL_EDICT_DONTSEND);
 
-		g_BackupFadeDuration.SetValue(entity, disable ? GetEntPropFloat(entity, Prop_Send, "m_flFadeOutDuration") : GetEntPropFloat(entity, Prop_Send, "m_flFadeInDuration"));
-		SetEntPropFloat(entity, Prop_Send, disable ? "m_flFadeOutDuration" : "m_flFadeInDuration", 0.0);
-		ChangeEdictState(entity, GetEntSendPropOffs(entity, disable ? "m_flFadeOutDuration" : "m_flFadeInDuration", true));
+		weight = GetEntPropFloat(entity, Prop_Send, "m_flCurWeight");
+		g_BackupCurWeight.SetValue(entity, weight);
+		SetEntPropFloat(entity, Prop_Send, "m_flCurWeight", disable ? 0.0 : weight);
+		ChangeEdictState(entity, GetEntSendPropOffs(entity, "m_flCurWeight", true));
 
-		AcceptEntityInput(entity, !disable ? (!!g_Queue.GetValue(entity)) ? "Enable" : "Disable" : "Disable");
+		SetEntProp(entity, Prop_Send, "m_bEnabled", !disable ? (!!g_Queue.GetValue(entity)) ? true : false : false);
 		ChangeEdictState(entity, GetEntSendPropOffs(entity, "m_bEnabled", true));
 
 		return Plugin_Continue;
@@ -367,15 +380,12 @@ void Frame_RevertEdictState(int ref)
 	}
 
 	int entity = EntRefToEntIndex(ref);
-	int client = g_FlaggedClient.GetValue(entity);
 
-	bool disable = g_bClientDisableCC[client];
-
-	AcceptEntityInput(entity, (!!g_Queue.GetValue(entity)) ? "Enable" : "Disable");
+	SetEntProp(entity, Prop_Send, "m_bEnabled", (!!g_Queue.GetValue(entity)) ? true : false);
 	ChangeEdictState(entity, GetEntSendPropOffs(entity, "m_bEnabled", true));
 
-	SetEntPropFloat(entity, Prop_Send, disable ? "m_flFadeOutDuration" : "m_flFadeInDuration", g_BackupFadeDuration.GetValue(entity));
-	ChangeEdictState(entity, GetEntSendPropOffs(entity, disable ? "m_flFadeOutDuration" : "m_flFadeInDuration", true));
+	SetEntPropFloat(entity, Prop_Send, "m_flCurWeight", g_BackupCurWeight.GetValue(entity));
+	ChangeEdictState(entity, GetEntSendPropOffs(entity, "m_flCurWeight", true));
 
 	SetEdictFlags(entity, GetEdictFlags(entity) & ~FL_EDICT_ALWAYS & ~FL_EDICT_DONTSEND);
 

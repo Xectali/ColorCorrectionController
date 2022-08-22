@@ -84,7 +84,7 @@ public void OnPluginStart()
 	HookEvent("round_prestart", Event_RoundChange);
 
 	//======== Translation ========//
-	LoadTranslations("ColorCorrection.phrases");
+	LoadTranslations("ColorCorrectionController.phrases");
 
 	//======== Init ========//
 	for (int i = 1; i <= MaxClients; i++) {

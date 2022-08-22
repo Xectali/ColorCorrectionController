@@ -6,3 +6,8 @@ build/*
 _*
 vendor
 *.zip
+
+*.smx
+plugins/
+.sourceknight
+.venv

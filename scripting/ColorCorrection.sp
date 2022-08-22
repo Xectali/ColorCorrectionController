@@ -19,7 +19,7 @@ IntMap g_BackupCurWeight = null;
 
 Menu g_hMenu_Settings = null;
 Cookie g_hStatusCookie;
-bool g_bClientDisableCC[MAXPLAYERS + 1] = false;
+bool g_bClientDisableCC[MAXPLAYERS + 1] = { false, ... };
 
 bool g_bEnabled;
 

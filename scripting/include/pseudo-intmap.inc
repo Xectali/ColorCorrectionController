@@ -15,7 +15,7 @@ typeset IntMapLoopCallback
 
 methodmap IntMapInternal __nullable__
 {
-	public IntMapInternal() {}
+	public void IntMapInternal() {}
 
 	public void __PackIntToStr(const int i, char s[6])
 	{
